@@ -1,8 +1,9 @@
 class Config(object):
+    torch_seed = 17
     env = 'default'
     backbone = 'resnet18'
     classify = 'softmax'
-    num_classes = 13938
+    num_classes = 43
     metric = 'arc_margin'
     easy_margin = False
     use_se = False
@@ -11,9 +12,7 @@ class Config(object):
     display = False
     finetune = False
 
-    train_root = '/data/Datasets/webface/CASIA-maxpy-clean-crop-144/'
-    train_list = '/data/Datasets/webface/train_data_13938.txt'
-    val_list = '/data/Datasets/webface/val_data_13938.txt'
+    train_root = '../arcface-tf2/data/graph_data_augmented'
 
     test_root = '/data1/Datasets/anti-spoofing/test/data_align_256'
     test_list = 'test.txt'
@@ -26,16 +25,16 @@ class Config(object):
     test_model_path = 'checkpoints/resnet18_110.pth'
     save_interval = 10
 
-    train_batch_size = 16  # batch size
+    train_batch_size = 20  # batch size
     test_batch_size = 60
 
-    input_shape = (1, 128, 128)
+    input_shape = (1, 256, 256)
 
     optimizer = 'sgd'
 
     use_gpu = True  # use GPU or not
     gpu_id = '0, 1'
-    num_workers = 4  # how many workers for loading data
+    num_workers = 8  # how many workers for loading data
     print_freq = 100  # print info every N batch
 
     debug_file = '/tmp/debug'  # if os.path.exists(debug_file): enter ipdb

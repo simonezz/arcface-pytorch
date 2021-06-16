@@ -163,7 +163,7 @@ class ResNetFace(nn.Module):
         self.inplanes = 64
         self.use_se = use_se
         super(ResNetFace, self).__init__()
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=3, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.prelu = nn.PReLU()
         self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -173,7 +173,7 @@ class ResNetFace(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.bn4 = nn.BatchNorm2d(512)
         self.dropout = nn.Dropout()
-        self.fc5 = nn.Linear(512 * 8 * 8, 512)
+        self.fc5 = nn.Linear(512 * 16 * 16, 512)
         self.bn5 = nn.BatchNorm1d(512)
 
         for m in self.modules():
@@ -203,20 +203,34 @@ class ResNetFace(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+
         x = self.conv1(x)
+
         x = self.bn1(x)
+
         x = self.prelu(x)
+        # print("before maxpool ", x.shape)
         x = self.maxpool(x)
+        # print("after maxpool ", x.shape)
 
         x = self.layer1(x)
+
         x = self.layer2(x)
+
         x = self.layer3(x)
+
         x = self.layer4(x)
+
         x = self.bn4(x)
+
         x = self.dropout(x)
+
         x = x.view(x.size(0), -1)
+        # print("before fc ",x.shape)
         x = self.fc5(x)
+        # print("after fc ",x.shape)
         x = self.bn5(x)
+
 
         return x
 
@@ -228,7 +242,7 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         # self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
         #                        bias=False)
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1,
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1,
                                bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
@@ -239,7 +253,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         # self.avgpool = nn.AvgPool2d(8, stride=1)
         # self.fc = nn.Linear(512 * block.expansion, num_classes)
-        self.fc5 = nn.Linear(512 * 8 * 8, 512)
+        self.fc5 = nn.Linear(512 * 16 * 16, 512)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -266,20 +280,29 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        print(x.shape)
         x = self.conv1(x)
+        print(x.shape)
         x = self.bn1(x)
+        print(x.shape)
         x = self.relu(x)
+        print(x.shape)
         # x = self.maxpool(x)
 
         x = self.layer1(x)
+        print(x.shape)
         x = self.layer2(x)
+        print(x.shape)
         x = self.layer3(x)
+        print(x.shape)
         x = self.layer4(x)
+        print(x.shape)
         # x = nn.AvgPool2d(kernel_size=x.size()[2:])(x)
         # x = self.avgpool(x)
         x = x.view(x.size(0), -1)
+        print(x.shape)
         x = self.fc5(x)
-
+        print(x.shape)
         return x
 
 
