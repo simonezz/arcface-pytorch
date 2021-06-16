@@ -36,8 +36,11 @@ if __name__ == "__main__":
 
     torch.manual_seed(opt.torch_seed)
 
-    if opt.display:
-        visualizer = Visualizer()
+    if wandb:
+        wandb_run = wandb.init(
+            config=opt, resume="allow", project=opt.project_name, name=opt.run_name
+        )
+
     device = torch.device("cuda")
 
     # train_dataset = Dataset(opt.train_root, opt.train_list, phase='train', input_shape=opt.input_shape)
@@ -68,7 +71,7 @@ if __name__ == "__main__":
 
     valloader = data.DataLoader(
         val_set,
-        batch_size=opt.train_batch_size,
+        batch_size=opt.test_batch_size,
         shuffle=True,
         num_workers=opt.num_workers,
     )
@@ -126,6 +129,7 @@ if __name__ == "__main__":
 
     train_accuracies = []
     test_accuracies = []
+    losses = []
 
     for i in range(opt.max_epoch):
 
@@ -134,6 +138,7 @@ if __name__ == "__main__":
         model.train()
 
         batch_train_acc = []
+        batch_loss = []
 
         for ii, data in enumerate(trainloader):
 
@@ -158,6 +163,7 @@ if __name__ == "__main__":
             acc = np.mean((output == label).astype(int))
 
             batch_train_acc.append(acc)
+            batch_loss.append(loss)
 
             if iters % opt.print_freq == 0:
 
@@ -196,8 +202,20 @@ if __name__ == "__main__":
 
         test_accuracies.append(np.mean(batch_test_acc))
 
+        losses.append(np.mean(batch_loss))
+
+        print("epoch {} loss {}".format(i + 1, losses[-1]))
         print("epoch {} train acc {}".format(i + 1, train_accuracies[-1]))
         print("epoch {} test acc {}".format(i + 1, test_accuracies[-1]))
+
+        tags = ["loss/loss", "accuracy/train_acc", "accuracy/test_acc"]
+
+        for x, tag in zip(
+            [losses[-1], train_accuracies[-1], test_accuracies[-1]], tags
+        ):
+
+            if wandb:
+                wandb.log({tag: x})
 
         if i % opt.save_interval == 0 or i == opt.max_epoch:
             save_model(model, opt.checkpoints_path, opt.backbone, i)
