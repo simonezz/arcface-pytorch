@@ -104,7 +104,7 @@ def main(_):
         criterion = torch.nn.CrossEntropyLoss()
 
     if opt["backbone"] == "resnet18":
-        model = resnet_face18(use_se=opt["use_se"])
+        model = resnet_face18(use_se=opt["use_se"], small=opt["small"])
     elif opt["backbone"] == "resnet34":
         model = resnet34()
     elif opt["backbone"] == "resnet50":
@@ -113,9 +113,16 @@ def main(_):
     if opt["metric"] == "add_margin":
         metric_fc = AddMarginProduct(512, opt["num_classes"], s=30, m=0.35)
     elif opt["metric"] == "arc_margin":
-        metric_fc = ArcMarginProduct(
-            512, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
-        )
+
+        if opt["small"]:
+            metric_fc = ArcMarginProduct(
+                256, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
+            )
+        else:
+            metric_fc = ArcMarginProduct(
+                512, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
+            )
+
     elif opt["metric"] == "sphere":
         metric_fc = SphereProduct(512, opt["num_classes"], m=4)
     else:
@@ -157,9 +164,9 @@ def main(_):
         batch_train_acc = []
         batch_loss = []
 
-        for ii, data_i in enumerate(trainloader):
+        for ii, data_t in enumerate(trainloader):
 
-            data_input, label = data_i
+            data_input, label = data_t
             data_input = data_input.to(device)
             label = label.to(device).long()
             # print(data)
@@ -196,12 +203,12 @@ def main(_):
 
         batch_test_acc = []
 
-        for ii, data_i in enumerate(valloader):
+        for _, data_v in enumerate(valloader):
 
-            data_input, label = data_i
+            data_input, label = data_v
             data_input = data_input.to(device)
             label = label.to(device).long()
-            # print(data)
+
             feature = model(data_input)
             output = metric_fc(feature, label)
             loss = criterion(output, label)

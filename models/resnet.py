@@ -249,7 +249,7 @@ class ResNetFace_s(nn.Module):
     def __init__(self, block, layers, use_se=True):
         self.inplanes = 32
         self.use_se = use_se
-        super(ResNetFace, self).__init__()
+        super(ResNetFace_s, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(32)
         self.prelu = nn.PReLU()
