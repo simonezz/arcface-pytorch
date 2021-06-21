@@ -14,12 +14,8 @@ from models import *
 import torchvision
 from torchvision.datasets import ImageFolder
 import torchvision.transforms as transforms
+import torchvision.models as models
 
-from utils import Visualizer, view_model
-import torch
-import numpy as np
-import random
-import time
 
 from torch.nn import DataParallel
 from torch.optim.lr_scheduler import StepLR
@@ -105,7 +101,9 @@ def main(_):
 
     if opt["backbone"] == "resnet18":
         # model = resnet_face18(use_se=opt["use_se"], size=opt["size"])
-        model = resnet18(pretrained=opt["pretrained"])
+
+        # model = models.resnet18(pretrained=opt["pretrained"])
+        model = ResNet18FineTuning(opt["num_classes"])
 
     elif opt["backbone"] == "resnet34":
         model = resnet34()
@@ -130,7 +128,11 @@ def main(_):
             )
         else:
             metric_fc = ArcMarginProduct(
-                1000, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
+                opt["num_classes"],
+                opt["num_classes"],
+                s=30,
+                m=0.5,
+                easy_margin=opt["easy_margin"],
             )
 
     elif opt["metric"] == "sphere":
@@ -220,13 +222,15 @@ def main(_):
             label = label.to(device).long()
 
             feature = model(data_input)
-            output = metric_fc(feature, label)
-            loss = criterion(output, label)
 
-            batch_test_loss.append(loss.data.cpu().numpy())
+            output = metric_fc(feature, label)
+            loss_v = criterion(output, label)
+
+            batch_test_loss.append(loss_v.data.cpu().numpy())
 
             output = output.data.cpu().numpy()
             output = np.argmax(output, axis=1)
+
             label = label.data.cpu().numpy()
             acc = np.mean((output == label).astype(int))
 

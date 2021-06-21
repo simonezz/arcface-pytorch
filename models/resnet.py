@@ -416,8 +416,7 @@ class ResNet(nn.Module):
     def __init__(self, block, layers):
         self.inplanes = 64
         super(ResNet, self).__init__()
-        # self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
-        #                        bias=False)
+        # self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
@@ -491,11 +490,11 @@ def resnet18(pretrained=False, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    # model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
-    # if pretrained:
-    #     model.load_state_dict(model_zoo.load_url(model_urls["resnet18"]))
-    # return model
-    return models.resnet18(pretrained=pretrained)
+    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls["resnet18"]))
+    return model
+    # return models.resnet18(pretrained=pretrained)
 
 
 def resnet34(pretrained=False, **kwargs):
@@ -551,3 +550,24 @@ def resnet_face18(use_se=True, size="ori", **kwargs):
     else:  # xs
         model = ResNetFace_xs(IRBlock, [2, 2, 2, 2], use_se=use_se, **kwargs)
     return model
+
+
+class ResNet18FineTuning(nn.Module):
+    def __init__(self, out_features, dropout=0.5):
+
+        super(ResNet18FineTuning, self).__init__()
+        self.model = models.resnet18(pretrained=True)
+        self.dropout = dropout
+        self.classifier = nn.Linear(1000, out_features)
+
+        if dropout:
+            self.dropout = nn.Dropout(dropout)
+
+    def forward(self, input):
+
+        hidden_features = self.model(input)
+
+        if self.dropout:
+
+            out = self.dropout(hidden_features)
+        return self.classifier(out)
