@@ -40,7 +40,7 @@ debug_file: "/tmp/debug"  # if os.path.exists(debug_file): enter ipdb
 result_file: "result.csv"
 
 max_epoch: !!int 50
-lr: !!float 1e-2  # initial learning rate
+lr: !!float 1e-1  # initial learning rate
 lr_step: !!int 10
 lr_decay: !!float 0.8  # when val_loss increase, lr: lr*lr_decay
 weight_decay: !!float 5e-2

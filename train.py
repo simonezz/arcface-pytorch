@@ -103,7 +103,7 @@ def main(_):
         # model = resnet_face18(use_se=opt["use_se"], size=opt["size"])
 
         # model = models.resnet18(pretrained=opt["pretrained"])
-        model = ResNet18FineTuning(opt["num_classes"])
+        model = ResNet18FineTuning(128, dropout=None)
 
     elif opt["backbone"] == "resnet34":
         model = resnet34()
@@ -112,6 +112,7 @@ def main(_):
 
     if opt["metric"] == "add_margin":
         metric_fc = AddMarginProduct(512, opt["num_classes"], s=30, m=0.35)
+
     elif opt["metric"] == "arc_margin":
 
         if opt["size"] == "s":
@@ -128,7 +129,7 @@ def main(_):
             )
         else:
             metric_fc = ArcMarginProduct(
-                opt["num_classes"],
+                128,
                 opt["num_classes"],
                 s=30,
                 m=0.5,
