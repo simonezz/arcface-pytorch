@@ -1,0 +1,15 @@
+program: train.py
+method: bayes
+metric:
+  name: "accuracy/test_acc"
+  goal: minimize
+parameters:
+  lr:
+    min: 5e-3
+    max: 1e-1
+  optimizer:
+    values: ["adam", "sgd"]
+  "weight_decay":
+    values: [5e-2, 3e-2, 1e-3, 4e-4]
+  "lr_decay":
+    values: [0.8, 0.7, 0.9, 0.5]

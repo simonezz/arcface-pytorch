@@ -64,7 +64,7 @@ def main(_):
 
     transform_train = transforms.Compose(
         [
-            transforms.Resize((256, 256)),  # image size 재조정
+            transforms.Resize((224, 224)),  # image size 재조정
             transforms.ToTensor(),  # Tensor로 바꾸고 (0~1로 자동으로 normalize)
             transforms.Normalize(
                 (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)  # -1 ~ 1 사이로 normalize
@@ -104,7 +104,9 @@ def main(_):
         criterion = torch.nn.CrossEntropyLoss()
 
     if opt["backbone"] == "resnet18":
-        model = resnet_face18(use_se=opt["use_se"], small=opt["small"])
+        # model = resnet_face18(use_se=opt["use_se"], size=opt["size"])
+        model = resnet18(pretrained=opt["pretrained"])
+
     elif opt["backbone"] == "resnet34":
         model = resnet34()
     elif opt["backbone"] == "resnet50":
@@ -114,13 +116,21 @@ def main(_):
         metric_fc = AddMarginProduct(512, opt["num_classes"], s=30, m=0.35)
     elif opt["metric"] == "arc_margin":
 
-        if opt["small"]:
+        if opt["size"] == "s":
             metric_fc = ArcMarginProduct(
                 256, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
             )
-        else:
+        elif opt["size"] == "ori":
             metric_fc = ArcMarginProduct(
                 512, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
+            )
+        elif opt["size"] == "xs":
+            metric_fc = ArcMarginProduct(
+                128, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
+            )
+        else:
+            metric_fc = ArcMarginProduct(
+                1000, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
             )
 
     elif opt["metric"] == "sphere":
@@ -153,16 +163,16 @@ def main(_):
 
     train_accuracies = []
     test_accuracies = []
-    losses = []
+    train_losses = []
+    test_losses = []
 
     for i in range(opt["max_epoch"]):
-
-        scheduler.step()
 
         model.train()
 
         batch_train_acc = []
-        batch_loss = []
+        batch_test_loss = []
+        batch_train_loss = []
 
         for ii, data_t in enumerate(trainloader):
 
@@ -176,18 +186,18 @@ def main(_):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             iters = i * len(trainloader) + ii
 
             output = output.data.cpu().numpy()
             output = np.argmax(output, axis=1)
             label = label.data.cpu().numpy()
-            # print(output)
-            # print(label)
+
             acc = np.mean((output == label).astype(int))
 
             batch_train_acc.append(acc)
-            batch_loss.append(loss.data.cpu().numpy())
+            batch_train_loss.append(loss.data.cpu().numpy())
 
             if iters % opt["print_freq"] == 0:
 
@@ -213,11 +223,11 @@ def main(_):
             output = metric_fc(feature, label)
             loss = criterion(output, label)
 
+            batch_test_loss.append(loss.data.cpu().numpy())
+
             output = output.data.cpu().numpy()
             output = np.argmax(output, axis=1)
             label = label.data.cpu().numpy()
-            # print(output)
-            # print(label)
             acc = np.mean((output == label).astype(int))
 
             batch_test_acc.append(acc)
@@ -226,16 +236,29 @@ def main(_):
 
         test_accuracies.append(np.mean(batch_test_acc))
 
-        losses.append(np.mean(batch_loss))
+        train_losses.append(np.mean(batch_train_loss))
+        test_losses.append(np.mean(batch_test_loss))
 
-        print("epoch {} loss {}".format(i + 1, losses[-1]))
+        print("epoch {} train loss {}".format(i + 1, train_losses[-1]))
+        print("epoch {} test loss {}".format(i + 1, test_losses[-1]))
         print("epoch {} train acc {}".format(i + 1, train_accuracies[-1]))
         print("epoch {} test acc {}".format(i + 1, test_accuracies[-1]))
 
-        tags = ["loss/loss", "accuracy/train_acc", "accuracy/test_acc"]
+        tags = [
+            "loss/train_loss",
+            "loss/test_loss",
+            "accuracy/train_acc",
+            "accuracy/test_acc",
+        ]
 
         for x, tag in zip(
-            [losses[-1], train_accuracies[-1], test_accuracies[-1]], tags
+            [
+                train_losses[-1],
+                test_losses[-1],
+                train_accuracies[-1],
+                test_accuracies[-1],
+            ],
+            tags,
         ):
 
             if wandb:

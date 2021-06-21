@@ -11,6 +11,7 @@ import torch.utils.model_zoo as model_zoo
 import torch.nn.utils.weight_norm as weight_norm
 import torch.nn.functional as F
 
+import torchvision.models as models
 
 # __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
 #            'resnet152']
@@ -328,6 +329,89 @@ class ResNetFace_s(nn.Module):
         return x
 
 
+class ResNetFace_xs(nn.Module):
+    def __init__(self, block, layers, use_se=True):
+        self.inplanes = 16
+        self.use_se = use_se
+        super(ResNetFace_xs, self).__init__()
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(16)
+        self.prelu = nn.PReLU()
+        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.layer1 = self._make_layer(block, 16, layers[0])
+        self.layer2 = self._make_layer(block, 32, layers[1], stride=2)
+        self.layer3 = self._make_layer(block, 64, layers[2], stride=2)
+        self.layer4 = self._make_layer(block, 128, layers[3], stride=2)
+        self.bn4 = nn.BatchNorm2d(128)
+        self.dropout = nn.Dropout()
+        self.fc5 = nn.Linear(128 * 16 * 16, 128)
+        self.bn5 = nn.BatchNorm1d(128)
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.xavier_normal_(m.weight)
+            elif isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm1d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.xavier_normal_(m.weight)
+                nn.init.constant_(m.bias, 0)
+
+    def _make_layer(self, block, planes, blocks, stride=1):
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                nn.Conv2d(
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
+                nn.BatchNorm2d(planes * block.expansion),
+            )
+        layers = []
+        layers.append(
+            block(self.inplanes, planes, stride, downsample, use_se=self.use_se)
+        )
+        self.inplanes = planes
+        for i in range(1, blocks):
+            layers.append(block(self.inplanes, planes, use_se=self.use_se))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+
+        x = self.conv1(x)
+
+        x = self.bn1(x)
+
+        x = self.prelu(x)
+        # print("before maxpool ", x.shape)
+        x = self.maxpool(x)
+        # print("after maxpool ", x.shape)
+
+        x = self.layer1(x)
+
+        x = self.layer2(x)
+
+        x = self.layer3(x)
+
+        x = self.layer4(x)
+
+        x = self.bn4(x)
+
+        x = self.dropout(x)
+
+        x = x.view(x.size(0), -1)
+        # print("before fc ",x.shape)
+        x = self.fc5(x)
+        # print("after fc ",x.shape)
+        x = self.bn5(x)
+
+        return x
+
+
 class ResNet(nn.Module):
     def __init__(self, block, layers):
         self.inplanes = 64
@@ -407,10 +491,11 @@ def resnet18(pretrained=False, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls["resnet18"]))
-    return model
+    # model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+    # if pretrained:
+    #     model.load_state_dict(model_zoo.load_url(model_urls["resnet18"]))
+    # return model
+    return models.resnet18(pretrained=pretrained)
 
 
 def resnet34(pretrained=False, **kwargs):
@@ -457,10 +542,12 @@ def resnet152(pretrained=False, **kwargs):
     return model
 
 
-def resnet_face18(use_se=True, small=True, **kwargs):
+def resnet_face18(use_se=True, size="ori", **kwargs):
 
-    if small:
-        model = ResNetFace_s(IRBlock, [2, 2, 2, 2], use_se=use_se, **kwargs)
-    else:
+    if size == "ori":
         model = ResNetFace(IRBlock, [2, 2, 2, 2], use_se=use_se, **kwargs)
+    elif size == "s":
+        model = ResNetFace_s(IRBlock, [2, 2, 2, 2], use_se=use_se, **kwargs)
+    else:  # xs
+        model = ResNetFace_xs(IRBlock, [2, 2, 2, 2], use_se=use_se, **kwargs)
     return model
