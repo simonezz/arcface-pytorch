@@ -32,7 +32,7 @@ def load_yaml(load_path):
     return loaded
 
 
-def save_model(model, save_path, name, iter_cnt):
+def save_model(model, save_path, name, iter_cnt=""):
     save_name = os.path.join(save_path, name + "_" + str(iter_cnt) + ".pth")
     torch.save(model.state_dict(), save_name)
     return save_name
@@ -43,6 +43,16 @@ def main(_):
     flags.DEFINE_string("cfg_path", "config_train.yaml", "config file path")
     # FLAGS = flags.FLAGS
     opt = load_yaml(FLAGS.cfg_path)
+
+    dir_ind = 0
+
+    while True:
+        try:
+            os.mkdir(opt["checkpoints_path"] + f"/{dir_ind}")
+            save_path = opt["checkpoints_path"] + f"/{dir_ind}"
+            break
+        except:
+            dir_ind += 1
 
     torch.manual_seed(opt["torch_seed"])
 
@@ -60,7 +70,7 @@ def main(_):
 
     transform_train = transforms.Compose(
         [
-            transforms.Resize((224, 224)),  # image size 재조정
+            transforms.Resize((256, 256)),  # image size 재조정
             transforms.ToTensor(),  # Tensor로 바꾸고 (0~1로 자동으로 normalize)
             transforms.Normalize(
                 (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)  # -1 ~ 1 사이로 normalize
@@ -100,10 +110,12 @@ def main(_):
         criterion = torch.nn.CrossEntropyLoss()
 
     if opt["backbone"] == "resnet18":
+
         # model = resnet_face18(use_se=opt["use_se"], size=opt["size"])
 
-        # model = models.resnet18(pretrained=opt["pretrained"])
-        model = ResNet18FineTuning(128, dropout=None)
+        model = ResNet18FineTuning(
+            128, dropout=opt["dr_rate"], pretrained=opt["pretrained"]
+        )
 
     elif opt["backbone"] == "resnet34":
         model = resnet34()
@@ -115,25 +127,23 @@ def main(_):
 
     elif opt["metric"] == "arc_margin":
 
-        if opt["size"] == "s":
-            metric_fc = ArcMarginProduct(
-                256, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
-            )
-        elif opt["size"] == "ori":
+        if opt["size"] == "ori":
             metric_fc = ArcMarginProduct(
                 512, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
             )
-        elif opt["size"] == "xs":
+
+        elif opt["size"] == "s":
             metric_fc = ArcMarginProduct(
-                128, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
+                256, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
             )
+
+        # elif opt["size"] == "xs":
+        #     metric_fc = ArcMarginProduct(
+        #         128, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
+        #     )
         else:
             metric_fc = ArcMarginProduct(
-                128,
-                opt["num_classes"],
-                s=30,
-                m=0.5,
-                easy_margin=opt["easy_margin"],
+                128, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
             )
 
     elif opt["metric"] == "sphere":
@@ -171,6 +181,8 @@ def main(_):
 
     for i in range(opt["max_epoch"]):
 
+        scheduler.step()
+
         model.train()
 
         batch_train_acc = []
@@ -182,14 +194,14 @@ def main(_):
             data_input, label = data_t
             data_input = data_input.to(device)
             label = label.to(device).long()
-            # print(data)
+
             feature = model(data_input)
             output = metric_fc(feature, label)
             loss = criterion(output, label)
             optimizer.zero_grad()
             loss.backward()
+
             optimizer.step()
-            scheduler.step()
 
             iters = i * len(trainloader) + ii
 
@@ -218,24 +230,25 @@ def main(_):
 
         for _, data_v in enumerate(valloader):
 
-            data_input, label = data_v
+            data_input_v, label_v = data_v
             data_input = data_input.to(device)
-            label = label.to(device).long()
+            label_v = label_v.to(device).long()
 
-            feature = model(data_input)
+            feature_v = model(data_input_v)
 
-            output = metric_fc(feature, label)
-            loss_v = criterion(output, label)
+            output_v = metric_fc(feature_v, label_v)
+            loss_v = criterion(output_v, label_v)
 
             batch_test_loss.append(loss_v.data.cpu().numpy())
 
-            output = output.data.cpu().numpy()
-            output = np.argmax(output, axis=1)
+            output_v = output_v.data.cpu().numpy()
+            output_v = np.argmax(output_v, axis=1)
 
-            label = label.data.cpu().numpy()
-            acc = np.mean((output == label).astype(int))
+            label_v = label_v.data.cpu().numpy()
 
-            batch_test_acc.append(acc)
+            acc_v = np.mean((output_v == label_v).astype(int))
+
+            batch_test_acc.append(acc_v)
 
         train_accuracies.append(np.mean(batch_train_acc))
 
@@ -270,12 +283,14 @@ def main(_):
                 wandb.log({tag: x})
 
         if i % opt["save_interval"] == 0 or i == opt["max_epoch"]:
-            save_model(model, opt["checkpoints_path"], opt["backbone"], i)
+            save_model(model, save_path, opt["backbone"], i)
 
         model.eval()
         # acc = lfw_test(model, img_paths, identity_list, opt.lfw_test_list, opt.test_batch_size)
         # if opt.display:
         #     visualizer.display_current_results(iters, acc, name='test_acc')
+
+    save_model(model, save_path, "final")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="dev3@100.100.10.115:22 password" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="arcface-pytorch" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
+      <paths name="arcface-pytorch">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/dev3/SaeheeJeon/arcface-pytorch" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="dev3@100.100.10.115:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="." local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="dev3@100.100.10.115:22 (3)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/dev3/SaeheeJeon/arcface-pytorch" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="dev3@100.100.10.115:22 password">
         <serverdata>
           <mappings>
@@ -13,6 +34,13 @@
         <serverdata>
           <mappings>
             <mapping deploy="/home/dev3/SaeheeJeon/arcface-pytorch" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="dev3@100.100.10.115:22 password (12)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

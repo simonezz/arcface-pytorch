@@ -221,9 +221,8 @@ class ResNetFace(nn.Module):
         x = self.bn1(x)
 
         x = self.prelu(x)
-        # print("before maxpool ", x.shape)
+
         x = self.maxpool(x)
-        # print("after maxpool ", x.shape)
 
         x = self.layer1(x)
 
@@ -238,9 +237,9 @@ class ResNetFace(nn.Module):
         x = self.dropout(x)
 
         x = x.view(x.size(0), -1)
-        # print("before fc ",x.shape)
+
         x = self.fc5(x)
-        # print("after fc ",x.shape)
+
         x = self.bn5(x)
 
         return x
@@ -404,9 +403,9 @@ class ResNetFace_xs(nn.Module):
         x = self.dropout(x)
 
         x = x.view(x.size(0), -1)
-        # print("before fc ",x.shape)
+
         x = self.fc5(x)
-        # print("after fc ",x.shape)
+
         x = self.bn5(x)
 
         return x
