@@ -1,6 +1,6 @@
 torch_seed: 123
 project_name: "arcface-pytorch"  # wandb project name
-run_name: "arcface-pytorch-tuning-2"  # wandb run name
+run_name: "arcface-pytorch-tuning-3"  # wandb run name
 
 env: "default"
 backbone: "resnet18"
@@ -24,12 +24,12 @@ load_model_path: "models/resnet18.pth"
 test_model_path: "checkpoints/resnet18_110.pth"
 save_interval: !!int 10
 
-train_batch_size: !!int 20  # batch size
-test_batch_size: !!int 8
+train_batch_size: !!int 64  # batch size
+test_batch_size: !!int 64
 
 input_shape: (1, 256, 256)
 
-optimizer: "adam"
+optimizer: "sgd"
 
 use_gpu: True  # use GPU or not
 gpu_id: "0, 1"
@@ -44,6 +44,9 @@ lr: !!float 3e-3  # initial learning rate
 lr_step: !!int 10
 lr_decay: !!float 0.7  # when val_loss increase, lr: lr*lr_decay
 weight_decay: !!float 5e-1
+
+clipping: False # Gradient clipping
+clipping_max_norm: 5
 
 size : None # ori, s(small), xs, None(if pretrained)
 pretrained: True # Use pretrained model?

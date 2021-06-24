@@ -201,6 +201,11 @@ def main(_):
             optimizer.zero_grad()
             loss.backward()
 
+            if opt["clipping"]:
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), opt["clipping_max_norm"]
+                )
+
             optimizer.step()
 
             iters = i * len(trainloader) + ii
