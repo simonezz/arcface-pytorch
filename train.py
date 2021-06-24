@@ -6,20 +6,20 @@ from absl.flags import FLAGS
 import yaml
 
 import torch
-
 from torch.utils import data
 import torch.nn.functional as F
-from models import *
+from torch.nn import DataParallel
+from torch.optim.lr_scheduler import StepLR
 
 import torchvision
 from torchvision.datasets import ImageFolder
 import torchvision.transforms as transforms
 import torchvision.models as models
 
+from sklearn.model_selection import KFold
 
-from torch.nn import DataParallel
-from torch.optim.lr_scheduler import StepLR
 from test import *
+from models import *
 
 import wandb
 
@@ -38,72 +38,13 @@ def save_model(model, save_path, name, iter_cnt=""):
     return save_name
 
 
-def main(_):
-
-    flags.DEFINE_string("cfg_path", "config_train.yaml", "config file path")
-    # FLAGS = flags.FLAGS
-    opt = load_yaml(FLAGS.cfg_path)
-
-    dir_ind = 0
-
-    while True:
-        try:
-            os.mkdir(opt["checkpoints_path"] + f"/{dir_ind}")
-            save_path = opt["checkpoints_path"] + f"/{dir_ind}"
-            break
-        except:
-            dir_ind += 1
-
-    torch.manual_seed(opt["torch_seed"])
-
-    if wandb:
-        wandb_run = wandb.init(
-            config=opt,
-            resume="allow",
-            project=opt["project_name"],
-            name=opt["run_name"],
-        )
-
-    device = torch.device("cuda")
-
-    # train_dataset = Dataset(opt.train_root, opt.train_list, phase='train', input_shape=opt.input_shape)
-
-    transform_train = transforms.Compose(
-        [
-            transforms.Resize((256, 256)),  # image size 재조정
-            transforms.ToTensor(),  # Tensor로 바꾸고 (0~1로 자동으로 normalize)
-            transforms.Normalize(
-                (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)  # -1 ~ 1 사이로 normalize
-            ),  # (c - m)/s 니까...
-        ]
-    )
-
-    dataset = ImageFolder(root=opt["train_root"], transform=transform_train)
-
-    train_len = int(0.7 * len(dataset))
-    valid_len = len(dataset) - train_len
-
-    train_set, val_set = torch.utils.data.random_split(dataset, [train_len, valid_len])
-
-    trainloader = data.DataLoader(
-        train_set,
-        batch_size=opt["train_batch_size"],
-        shuffle=True,
-        num_workers=opt["num_workers"],
-    )
-
-    valloader = data.DataLoader(
-        val_set,
-        batch_size=opt["test_batch_size"],
-        shuffle=True,
-        num_workers=opt["num_workers"],
-    )
-
-    # identity_list = get_lfw_list(opt.lfw_test_list)
-    # img_paths = [os.path.join(opt.lfw_root, each) for each in identity_list]
-
-    print("{} train iters per epoch:".format(len(trainloader)))
-
+def train_model(
+    opt,
+    trainloader,
+    valloader,
+    device,
+    save_path,
+):
     if opt["loss"] == "focal_loss":
         criterion = FocalLoss(gamma=2)
     else:
@@ -137,10 +78,6 @@ def main(_):
                 256, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
             )
 
-        # elif opt["size"] == "xs":
-        #     metric_fc = ArcMarginProduct(
-        #         128, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
-        #     )
         else:
             metric_fc = ArcMarginProduct(
                 128, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
@@ -151,7 +88,6 @@ def main(_):
     else:
         metric_fc = nn.Linear(512, opt["num_classes"])
 
-    # view_model(model, opt.input_shape)
     print(model)
     model.to(device)
     model = DataParallel(model)
@@ -220,7 +156,6 @@ def main(_):
             batch_train_loss.append(loss.data.cpu().numpy())
 
             if iters % opt["print_freq"] == 0:
-
                 time_str = time.asctime(time.localtime(time.time()))
                 speed = opt["print_freq"] / (time.time() - start)
                 print(
@@ -234,7 +169,6 @@ def main(_):
         batch_test_acc = []
 
         for _, data_v in enumerate(valloader):
-
             data_input_v, label_v = data_v
             data_input = data_input.to(device)
             label_v = label_v.to(device).long()
@@ -291,11 +225,106 @@ def main(_):
             save_model(model, save_path, opt["backbone"], i)
 
         model.eval()
-        # acc = lfw_test(model, img_paths, identity_list, opt.lfw_test_list, opt.test_batch_size)
-        # if opt.display:
-        #     visualizer.display_current_results(iters, acc, name='test_acc')
 
     save_model(model, save_path, "final")
+
+
+def main(_):
+
+    flags.DEFINE_string("cfg_path", "config_train.yaml", "config file path")
+
+    opt = load_yaml(FLAGS.cfg_path)
+
+    dir_ind = 0
+
+    while True:
+        try:
+            os.mkdir(opt["checkpoints_path"] + f"/{dir_ind}")
+            save_path = opt["checkpoints_path"] + f"/{dir_ind}"
+            break
+        except:
+            dir_ind += 1
+
+    torch.manual_seed(opt["torch_seed"])
+
+    if wandb:
+
+        wandb_run = wandb.init(
+            config=opt,
+            resume="allow",
+            project=opt["project_name"],
+            name=opt["run_name"],
+        )
+
+    device = torch.device("cuda")
+
+    transform_train = transforms.Compose(
+        [
+            transforms.Resize((256, 256)),  # resize image to 256 X 256
+            transforms.ToTensor(),  # to tensor & normalize(0~1)
+            transforms.Normalize(
+                (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)  # normalize(-1~1)
+            ),  # (c-m)/s
+        ]
+    )
+
+    dataset = ImageFolder(root=opt["train_root"], transform=transform_train)
+
+    if opt["cross_validation"]:
+
+        splits = KFold(n_splits=5, shuffle=True, random_state=opt["torch_seed"])
+
+        for fold, (train_idx, val_idx) in enumerate(splits.split(dataset)):
+
+            print(f"---{fold}  Fold")
+            train = torch.utils.data.Subset(dataset, train_idx)
+            test = torch.utils.data.Subset(dataset, val_idx)
+
+            trainloader = torch.utils.data.DataLoader(
+                train,
+                batch_size=opt["train_batch_size"],
+                shuffle=True,
+                num_workers=0,
+                pin_memory=False,
+            )
+            valloader = torch.utils.data.DataLoader(
+                test,
+                batch_size=opt["test_batch_size"],
+                shuffle=True,
+                num_workers=0,
+                pin_memory=False,
+            )
+
+            print("{} train iters per epoch:".format(len(trainloader)))
+
+            train_model(opt, trainloader, valloader, device, save_path)
+
+    else:
+
+        train_len = int(0.7 * len(dataset))
+        valid_len = len(dataset) - train_len
+
+        train_set, val_set = torch.utils.data.random_split(
+            dataset, [train_len, valid_len]
+        )
+
+        trainloader = data.DataLoader(
+            train_set,
+            batch_size=opt["train_batch_size"],
+            shuffle=True,
+            num_workers=opt["num_workers"],
+        )
+
+        valloader = data.DataLoader(
+            val_set,
+            batch_size=opt["test_batch_size"],
+            shuffle=True,
+            num_workers=opt["num_workers"],
+        )
+
+        print("{} train iters per epoch:".format(len(trainloader)))
+
+        train_model(opt, trainloader, valloader, device, save_path)
 
 
 if __name__ == "__main__":

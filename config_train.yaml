@@ -1,6 +1,6 @@
 torch_seed: 123
 project_name: "arcface-pytorch"  # wandb project name
-run_name: "arcface-pytorch-tuning-3"  # wandb run name
+run_name: "cross-validation"  # wandb run name
 
 env: "default"
 backbone: "resnet18"
@@ -52,3 +52,4 @@ size : None # ori, s(small), xs, None(if pretrained)
 pretrained: True # Use pretrained model?
 
 dr_rate: False
+cross_validation: True
