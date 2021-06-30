@@ -115,6 +115,8 @@ def train_model(
     train_losses = []
     test_losses = []
 
+    best_test_accuracy = 0.0
+
     for i in range(opt["max_epoch"]):
 
         scheduler.step()
@@ -201,6 +203,11 @@ def train_model(
         print("epoch {} train acc {}".format(i + 1, train_accuracies[-1]))
         print("epoch {} test acc {}".format(i + 1, test_accuracies[-1]))
 
+        if best_test_accuracy < test_accuracies[-1]:
+
+            best_test_accuracy = test_accuracies[-1]
+            save_model(model, save_path, opt["backbone"] + " best")
+
         tags = [
             "loss/train_loss",
             "loss/test_loss",
@@ -227,6 +234,7 @@ def train_model(
         model.eval()
 
     save_model(model, save_path, "final")
+    print("saved at ", save_path)
 
 
 def main(_):
