@@ -34,7 +34,7 @@ def load_yaml(load_path):
 
 def save_model(model, save_path, name, iter_cnt=""):
     save_name = os.path.join(save_path, name + "_" + str(iter_cnt) + ".pth")
-    torch.save(model.state_dict(), save_name)
+    torch.save(model.module.state_dict(), save_name)
     return save_name
 
 
