@@ -5,7 +5,7 @@ Created on 21-06-30
 @author: SaeheeJeon
 
 Inference using a trained model
-(not the output of metric(ArcFace) ! it is feature vector from the last output of backbone Network)
+(not the output of metric(ArcFace) ! it extracts feature vectors from the last output of backbone Network(e.g. ResNet))
 """
 from __future__ import print_function
 from absl.flags import FLAGS
