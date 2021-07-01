@@ -21,8 +21,10 @@ test_list: "test.txt"
 
 checkpoints_path: "checkpoints"
 load_model_path: "models/resnet18.pth"
-test_model_path: "checkpoints/resnet18_110.pth"
+test_model_path: "checkpoints/12/resnet18 best_.pth"
 save_interval: !!int 10
+
+infer_file_path: "../graphClassification/graph_data_original"
 
 train_batch_size: !!int 64  # batch size
 test_batch_size: !!int 64

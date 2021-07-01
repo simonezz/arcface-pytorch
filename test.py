@@ -16,7 +16,7 @@ from torch.nn import DataParallel
 
 
 def get_lfw_list(pair_list):
-    with open(pair_list, 'r') as fd:
+    with open(pair_list, "r") as fd:
         pairs = fd.readlines()
     data_list = []
     for pair in pairs:
@@ -50,7 +50,7 @@ def get_featurs(model, test_list, batch_size=10):
     for i, img_path in enumerate(test_list):
         image = load_image(img_path)
         if image is None:
-            print('read {} error'.format(img_path))
+            print("read {} error".format(img_path))
 
         if images is None:
             images = image
@@ -107,7 +107,7 @@ def cal_accuracy(y_score, y_true):
     best_th = 0
     for i in range(len(y_score)):
         th = y_score[i]
-        y_test = (y_score >= th)
+        y_test = y_score >= th
         acc = np.mean((y_test == y_true).astype(int))
         if acc > best_acc:
             best_acc = acc
@@ -117,7 +117,7 @@ def cal_accuracy(y_score, y_true):
 
 
 def test_performance(fe_dict, pair_list):
-    with open(pair_list, 'r') as fd:
+    with open(pair_list, "r") as fd:
         pairs = fd.readlines()
 
     sims = []
@@ -141,21 +141,25 @@ def lfw_test(model, img_paths, identity_list, compair_list, batch_size):
     features, cnt = get_featurs(model, img_paths, batch_size=batch_size)
     print(features.shape)
     t = time.time() - s
-    print('total time is {}, average time is {}'.format(t, t / cnt))
+    print("total time is {}, average time is {}".format(t, t / cnt))
     fe_dict = get_feature_dict(identity_list, features)
     acc, th = test_performance(fe_dict, compair_list)
-    print('lfw face verification accuracy: ', acc, 'threshold: ', th)
+    print("lfw face verification accuracy: ", acc, "threshold: ", th)
     return acc
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     opt = Config()
-    if opt.backbone == 'resnet18':
-        model = resnet_face18(opt.use_se)
-    elif opt.backbone == 'resnet34':
+    if opt.backbone == "resnet18":
+
+        model = ResNet18FineTuning(
+            128, dropout=opt["dr_rate"], pretrained=opt["pretrained"]
+        )
+        # model = resnet_face18(opt.use_se)
+    elif opt.backbone == "resnet34":
         model = resnet34()
-    elif opt.backbone == 'resnet50':
+    elif opt.backbone == "resnet50":
         model = resnet50()
 
     model = DataParallel(model)
@@ -168,7 +172,3 @@ if __name__ == '__main__':
 
     model.eval()
     lfw_test(model, img_paths, identity_list, opt.lfw_test_list, opt.test_batch_size)
-
-
-
-

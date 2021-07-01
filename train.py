@@ -34,7 +34,9 @@ def load_yaml(load_path):
 
 def save_model(model, save_path, name, iter_cnt=""):
     save_name = os.path.join(save_path, name + "_" + str(iter_cnt) + ".pth")
-    torch.save(model.module.state_dict(), save_name)
+    torch.save(
+        model.module.state_dict(), save_name
+    )  # dataparallel 사용 시 module를 붙여 저장해야 범용적으로 load 가능
     return save_name
 
 
@@ -183,6 +185,7 @@ def train_model(
             batch_test_loss.append(loss_v.data.cpu().numpy())
 
             output_v = output_v.data.cpu().numpy()
+
             output_v = np.argmax(output_v, axis=1)
 
             label_v = label_v.data.cpu().numpy()
