@@ -60,23 +60,28 @@ def return_fv(model, device, input_path):
 
         for i in range(k * bs, min((k + 1) * bs, len(input_path))):
 
-            img = Image.open(input_path([i]))
+            img = Image.open(input_path[i])
             batch_imgs.append(transform_train(img))
 
+        batch_imgs = torch.stack(batch_imgs)
+
         data.append(batch_imgs)
+
+    data = torch.stack(data)
 
     for data_input in data:
 
         data_input = data_input.to(device)
-
         feature = model(data_input)
 
         features.append(feature)
 
+    features = torch.stack(features)
+
     return features
 
 
-if __name__ == "__main__":
+def main(_):
 
     flags.DEFINE_string("cfg_path", "config_train.yaml", "config file path")
 
@@ -84,26 +89,31 @@ if __name__ == "__main__":
 
     device = torch.device("cuda")
 
-    if opt.backbone == "resnet18":
+    if opt["backbone"] == "resnet18":
 
         model = ResNet18FineTuning(
             128, dropout=opt["dr_rate"], pretrained=opt["pretrained"]
         )
         # model = resnet_face18(opt.use_se)
-    elif opt.backbone == "resnet34":
+    elif opt["backbone"] == "resnet34":
         model = resnet34()
-    elif opt.backbone == "resnet50":
+    elif opt["backbone"] == "resnet50":
         model = resnet50()
 
     model.to(device)
-    model = DataParallel(model)
+    # model = DataParallel(model)
     # load_model(model, opt.test_model_path)
-    model.load_state_dict(torch.load(opt.test_model_path))
+    model.load_state_dict(torch.load(opt["test_model_path"]))
     model.to(torch.device("cuda"))
 
-    return_fv(model, device, opt.infer_file_path)
+    return_fv(model, device, opt["infer_file_path"])
     # identity_list = get_lfw_list(opt.lfw_test_list)
     # img_paths = [os.path.join(opt.lfw_root, each) for each in identity_list]
     #
     # model.eval()
     # lfw_test(model, img_paths, identity_list, opt.lfw_test_list, opt.test_batch_size)
+
+
+if __name__ == "__main__":
+
+    app.run(main)

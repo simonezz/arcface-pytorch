@@ -24,8 +24,8 @@ load_model_path: "models/resnet18.pth"
 test_model_path: "checkpoints/12/resnet18 best_.pth"
 save_interval: !!int 10
 
-infer_file_path: "../graphClassification/graph_data_original"
-
+#infer_file_path: "../graphClassification/graph_data_original"
+infer_file_path: ['../graphClassification/graph_data_original/0/125183_graph 0.87.png', '../graphClassification/graph_data_original/0/303223_graph 0.88.png']
 train_batch_size: !!int 64  # batch size
 test_batch_size: !!int 64
 
