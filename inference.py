@@ -10,21 +10,17 @@ Inference using a trained model
 from __future__ import print_function
 from absl.flags import FLAGS
 from absl import app, flags
+import yaml
 
+from tqdm import tqdm
 
-import os, yaml
-import cv2
+import torch
+from torch.nn import DataParallel
+from torchvision.datasets import ImageFolder
+import torchvision.transforms as transforms
 from PIL import Image
 
 from models import *
-import torch
-import numpy as np
-import time
-from config import Config
-from torch.nn import DataParallel
-
-from torchvision.datasets import ImageFolder
-import torchvision.transforms as transforms
 
 
 def load_yaml(load_path):
@@ -54,29 +50,19 @@ def return_fv(model, device, input_path):
 
     nloop = math.ceil(len(input_path) / bs)
 
-    for k in range(nloop):
+    for k in tqdm(range(nloop)):
 
         batch_imgs = []
 
-        for i in range(k * bs, min((k + 1) * bs, len(input_path))):
+        for i in tqdm(range(k * bs, min((k + 1) * bs, len(input_path)))):
 
             img = Image.open(input_path[i])
             batch_imgs.append(transform_train(img))
 
         batch_imgs = torch.stack(batch_imgs)
-
-        data.append(batch_imgs)
-
-    data = torch.stack(data)
-
-    for data_input in data:
-
-        data_input = data_input.to(device)
-        feature = model(data_input)
-
+        batch_imgs = batch_imgs.to(device)
+        feature = model(batch_imgs)
         features.append(feature)
-
-    features = torch.stack(features)
 
     return features
 
@@ -107,11 +93,6 @@ def main(_):
     model.to(torch.device("cuda"))
 
     return_fv(model, device, opt["infer_file_path"])
-    # identity_list = get_lfw_list(opt.lfw_test_list)
-    # img_paths = [os.path.join(opt.lfw_root, each) for each in identity_list]
-    #
-    # model.eval()
-    # lfw_test(model, img_paths, identity_list, opt.lfw_test_list, opt.test_batch_size)
 
 
 if __name__ == "__main__":
