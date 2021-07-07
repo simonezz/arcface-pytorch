@@ -73,7 +73,7 @@ def main(_):
 
     opt = load_yaml(FLAGS.cfg_path)
 
-    device = torch.device("cuda")
+    device = torch.device("cuda:0")
 
     if opt["backbone"] == "resnet18":
 

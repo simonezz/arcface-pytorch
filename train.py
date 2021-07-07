@@ -72,17 +72,29 @@ def train_model(
 
         if opt["size"] == "ori":
             metric_fc = ArcMarginProduct(
-                512, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
+                512,
+                opt["num_classes"],
+                s=30,
+                m=opt["arc_margin"],
+                easy_margin=opt["easy_margin"],
             )
 
         elif opt["size"] == "s":
             metric_fc = ArcMarginProduct(
-                256, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
+                256,
+                opt["num_classes"],
+                s=30,
+                m=opt["arc_margin"],
+                easy_margin=opt["easy_margin"],
             )
 
         else:
             metric_fc = ArcMarginProduct(
-                128, opt["num_classes"], s=30, m=0.5, easy_margin=opt["easy_margin"]
+                128,
+                opt["num_classes"],
+                s=30,
+                m=opt["arc_margin"],
+                easy_margin=opt["easy_margin"],
             )
 
     elif opt["metric"] == "sphere":

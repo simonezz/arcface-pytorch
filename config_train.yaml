@@ -1,6 +1,6 @@
 torch_seed: 123
 project_name: "arcface-pytorch"  # wandb project name
-run_name: "best_config"  # wandb run name
+run_name: "increase margin"  # wandb run name
 
 env: "default"
 backbone: "resnet18"
@@ -55,3 +55,5 @@ pretrained: True # Use pretrained model?
 
 dr_rate: False
 cross_validation: False
+
+arc_margin: !!float 0.7
